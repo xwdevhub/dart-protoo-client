@@ -163,14 +163,14 @@ class Peer extends EnhancedEventEmitter {
       this.safeEmit('failed', currentAttempt);
     });
 
-    _transport.on('close', () {
+    _transport.on('close', (message) {
       if (this._closed) return;
       this._closed = true;
       logger.debug('emit "close"');
 
       this._connected = false;
 
-      this.safeEmit('close');
+      this.safeEmit('close', message);
     });
 
     this._transport.on('message', (message) {

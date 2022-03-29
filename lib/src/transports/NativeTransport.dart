@@ -69,6 +69,7 @@ class Transport extends TransportInterface {
     WebSocket.connect(this._url, protocols: ['protoo']).then((ws) {
       if (ws.readyState == WebSocket.open) {
         this._ws = ws;
+        _ws!.pingInterval = Duration(seconds: 3);
         _onOpen();
 
         ws.listen((event) {
@@ -77,6 +78,11 @@ class Transport extends TransportInterface {
           if (message == null) return;
 
           this.safeEmit('message', message);
+        }, onDone: () {
+          safeEmit('close', {
+            'closeCode': _ws?.closeCode,
+            'closeReason': _ws?.closeReason,
+          });
         }, onError: _onError);
       } else {
         _logger.warn(
