@@ -48,73 +48,44 @@ class Transport extends TransportInterface {
     }
   }
 
+  _runWebSocket() async {
+    WebSocket.connect(this._url, protocols: ['protoo']).then((ws) {
+      if (ws.readyState == WebSocket.open) {
+        ws.pingInterval = Duration(seconds: 3);
+        this._ws = ws;
+        _onOpen();
+        ws.listen(_onMessage, onDone: _onClose, onError: _onError);
+      } else {
+        _logger.warn(
+            'WebSocket "close" event code:${ws.closeCode}, reason:"${ws.closeReason}"]');
+        _onClose();
+      }
+    });
+  }
+
   _onOpen() {
     _logger.debug('onOpen');
     this.safeEmit('open');
   }
 
-  // _onClose(event) {
-  //   logger.warn(
-  //       'WebSocket "close" event [wasClean:${e.wasClean}, code:${e.code}, reason:"${e.reason}"]');
-  //   this._closed = true;
+  _onClose() async {
+    this._closed = true;
+    final closeCode = _ws?.closeCode;
+    final closeReason = _ws?.closeReason;
+    safeEmit('close', {
+      'closeCode': closeCode,
+      'closeReason': closeReason,
+    });
+  }
 
-  //   this.safeEmit('close');
-  // }
+  _onMessage(event) {
+    final message = Message.parse(event);
+    if (message == null) return;
+    safeEmit('message', message);
+  }
 
   _onError(err) {
     _logger.error('WebSocket "error" event');
-  }
-
-  _runWebSocket() async {
-    WebSocket.connect(this._url, protocols: ['protoo']).then((ws) {
-      if (ws.readyState == WebSocket.open) {
-        this._ws = ws;
-        _ws!.pingInterval = Duration(seconds: 3);
-        _onOpen();
-
-        ws.listen((event) {
-          final message = Message.parse(event);
-
-          if (message == null) return;
-
-          this.safeEmit('message', message);
-        }, onDone: () {
-          safeEmit('close', {
-            'closeCode': _ws?.closeCode,
-            'closeReason': _ws?.closeReason,
-          });
-        }, onError: _onError);
-      } else {
-        _logger.warn(
-            'WebSocket "close" event code:${ws.closeCode}, reason:"${ws.closeReason}"]');
-        this._closed = true;
-
-        this.safeEmit('close');
-      }
-    });
-    // this._ws.listen((e) {
-    //   logger.debug('onOpen');
-    //   this.safeEmit('open');
-    // });
-
-    // this._ws.onClose.listen((e) {
-    //   logger.warn(
-    //       'WebSocket "close" event [wasClean:${e.wasClean}, code:${e.code}, reason:"${e.reason}"]');
-    //   this._closed = true;
-
-    //   this.safeEmit('close');
-    // });
-
-    // this._ws.onError.listen((e) {
-    //   logger.error('WebSocket "error" event');
-    // });
-
-    // this._ws.onMessage.listen((e) {
-    //   final message = Message.parse(e.data);
-
-    //   if (message == null) return;
-
-    //   this.safeEmit('message', message);
-    // });
+    emit('failed', err);
   }
 }
