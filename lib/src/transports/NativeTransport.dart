@@ -51,7 +51,7 @@ class Transport extends TransportInterface {
   _runWebSocket() async {
     WebSocket.connect(this._url, protocols: ['protoo']).then((ws) {
       if (ws.readyState == WebSocket.open) {
-        ws.pingInterval = Duration(seconds: 3);
+        ws.pingInterval = Duration(seconds: 10);
         this._ws = ws;
         _onOpen();
         ws.listen(_onMessage, onDone: _onClose, onError: _onError);
