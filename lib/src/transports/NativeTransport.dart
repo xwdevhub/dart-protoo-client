@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -12,6 +13,7 @@ class Transport extends TransportInterface {
   late String _url;
   late dynamic _options;
   WebSocket? _ws;
+  StreamSubscription? _streamSubscription;
 
   Transport(String url, {dynamic options}) : super(url, options: options) {
     _logger.debug('constructor() [url:$url, options:$options]');
@@ -33,6 +35,7 @@ class Transport extends TransportInterface {
     this.safeEmit('close');
 
     try {
+      _streamSubscription?.cancel();
       this._ws?.close();
     } catch (error) {
       _logger.error('close() | error closing the WebSocket: $error');
@@ -55,7 +58,9 @@ class Transport extends TransportInterface {
         ws.pingInterval = Duration(seconds: interval);
         this._ws = ws;
         _onOpen();
-        ws.listen(_onMessage, onDone: _onClose, onError: _onError);
+        _streamSubscription?.cancel();
+        _streamSubscription =
+            ws.listen(_onMessage, onDone: _onClose, onError: _onError);
       } else {
         _logger.warn(
             'WebSocket "close" event code:${ws.closeCode}, reason:"${ws.closeReason}"]');
